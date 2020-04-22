@@ -22,7 +22,7 @@ def read(fname):
 setup(
     name="dsargparse",
     version="0.3.2",
-    author="Junpei Kawamoto",
+    author="Yoshihiko Ueno, Junpei Kawamoto",
     author_email="kawamoto.junpei@gmail.com",
     description=dsargparse.__doc__,
     long_description=read("README.rst"),

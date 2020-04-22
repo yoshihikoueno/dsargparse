@@ -17,9 +17,9 @@ and description.
 
 Install
 ---------
-Use `pip` to install from [PyPi](https://pypi.python.org/pypi?:action=display&name=dsargparse).
+Use `pip` to install.
 ```
-$ pip install -U dsargparse
+$ pip install -U git+https://github.com/yoshihikoueno/dsargparse.git@master
 ```
 
 Example
