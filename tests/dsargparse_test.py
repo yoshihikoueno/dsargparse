@@ -32,8 +32,7 @@ class TestParser(unittest.TestCase):
             Parse a docstring.
 
             Parse a docstring and extract three components; headline, description,
-            and map of arguments to help texts.
-            """))
+            and map of arguments to help texts."""))
         self.assertIn("doc", ans["args"])
         self.assertEqual(ans["args"]["doc"], "docstring.")
 
@@ -71,6 +70,49 @@ class TestParser(unittest.TestCase):
         self.assertIn("two", ans["args"])
         self.assertEqual(ans["args"]["two"], "definition of two.")
 
+    def test_docstring_with_multiline_args(self):
+        """ Test for a docstring which doesn't have descriptions.
+        """
+        # import pdb; pdb.set_trace()
+        ans = dsargparse._parse_doc("""Test docstring.
+
+        Args:
+          one: definition of one.
+            More detail description about one.
+            More detail description about one.
+            More detail description about one.
+          two: definition of two.
+            More detail description about two.
+            More detail description about two.
+            More detail description about two.
+
+        Returns:
+          some value.
+        """)
+        self.assertEqual(ans["headline"], "Test docstring.")
+        self.assertEqual(
+            ans["description"],
+            textwrap.dedent("""\
+            Test docstring."""))
+        self.assertIn("one", ans["args"])
+        self.assertEqual(
+            ans["args"]["one"],
+            textwrap.dedent('''\
+                definition of one.
+                  More detail description about one.
+                  More detail description about one.
+                  More detail description about one.''')
+        )
+        self.assertIn("two", ans["args"])
+        self.assertEqual(
+            ans["args"]["two"],
+            textwrap.dedent('''\
+                definition of two.
+                  More detail description about two.
+                  More detail description about two.
+                  More detail description about two.''')
+        )
+
     def test_docstring_without_args(self):
         """ Test for a docstring which doesn't have args.
         """
@@ -87,8 +129,7 @@ class TestParser(unittest.TestCase):
             textwrap.dedent("""\
             Test docstring.
 
-            This function do something.
-            """))
+            This function do something."""))
         self.assertEqual(len(ans["args"]), 0)
 
 

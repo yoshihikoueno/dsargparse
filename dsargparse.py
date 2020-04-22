@@ -17,6 +17,7 @@ import argparse
 import itertools
 import inspect
 import textwrap
+import re
 
 # Load objects defined in argparse.
 for name in argparse.__all__:
@@ -45,6 +46,52 @@ def _checker(keywords):
     return _
 
 
+def _parse_args(args_desc):
+    '''Parse an Args description
+
+    Parse given args description and return in dictionary form.
+
+    Args:
+        args_desc: description of args.
+
+    Returns:
+        a dictionary.
+    '''
+    def extract_key(line):
+        '''exctract a key from a line'''
+        key = re.sub(r'(^[^\s]+?):(.|\n)*$', r'\1', line)
+        return key
+
+    def extract_value(line):
+        '''exctract a key from a line'''
+        value = re.sub(r'^[^\s]+?:((.|\n)*)$', r'\1', line).strip()
+        return value
+
+    argmap = {}
+
+    args = list(filter(bool, args_desc.splitlines()))
+    for idx, arg_line in enumerate(args):
+        if _starts_with_white(arg_line): continue
+        assert ':' in arg_line
+        additional_lines = itertools.takewhile(_starts_with_white, args[idx + 1:])
+        if additional_lines: arg_line += '\n' + '\n'.join(additional_lines)
+        key, value = extract_key(arg_line), extract_value(arg_line)
+        argmap[key] = value
+    return argmap
+
+
+def _starts_with_white(line):
+    '''check if starts with a white
+
+    Args:
+        line: a string line
+
+    Returns:
+        bool
+    '''
+    return bool(re.match(r'^\s+.*$', line))
+
+
 def _parse_doc(doc):
     """Parse a docstring.
 
@@ -57,25 +104,17 @@ def _parse_doc(doc):
     Returns:
       a dictionary.
     """
-    lines = doc.split("\n")
-    descriptions = list(itertools.takewhile(_checker(_KEYWORDS), lines))
+    lines = doc.strip().splitlines()
+    descriptions = list(filter(bool, itertools.takewhile(_checker(_KEYWORDS), lines)))
 
-    if len(descriptions) < 3:
-        description = lines[0]
-    else:
-        description = "{0}\n\n{1}".format(
-            lines[0], textwrap.dedent("\n".join(descriptions[2:])))
+    if len(descriptions) > 0: description = descriptions[0]
+    if len(descriptions) > 1: description += "\n\n" + textwrap.dedent("\n".join(descriptions[1:]))
 
-    args = list(itertools.takewhile(
+    args = list(filter(bool, itertools.takewhile(
         _checker(_KEYWORDS_OTHERS),
-        itertools.dropwhile(_checker(_KEYWORDS_ARGS), lines)))
-    argmap = {}
-    if len(args) > 1:
-        for pair in args[1:]:
-            kv = [v.strip() for v in pair.split(":")]
-            if len(kv) >= 2:
-                argmap[kv[0]] = ":".join(kv[1:])
+        itertools.dropwhile(_checker(_KEYWORDS_ARGS), lines))))
 
+    argmap = _parse_args(textwrap.dedent('\n'.join(args[1:])))
     return dict(headline=descriptions[0], description=description, args=argmap)
 
 
