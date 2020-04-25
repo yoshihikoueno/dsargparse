@@ -55,9 +55,9 @@ class TestParser(unittest.TestCase):
             textwrap.dedent("""\
             Test docstring."""))
         self.assertIn('one', ans['args'])
-        self.assertEqual(ans['args']['one']['type'], 'int')
+        self.assertEqual(ans['args']['one']['type'], int)
         self.assertIn('two', ans["args"])
-        self.assertEqual(ans['args']['two']['type'], 'float')
+        self.assertEqual(ans['args']['two']['type'], float)
 
     def test_collective_type(self):
         """ Test for a docstring which doesn't have descriptions.
@@ -81,10 +81,10 @@ class TestParser(unittest.TestCase):
             textwrap.dedent("""\
             Test docstring."""))
         self.assertIn('one', ans['args'])
-        self.assertEqual(ans['args']['one']['type'], 'int')
+        self.assertEqual(ans['args']['one']['type'], int)
         self.assertEqual(ans['args']['one']['nargs'], '+')
         self.assertIn('two', ans["args"])
-        self.assertEqual(ans['args']['two']['type'], 'float')
+        self.assertEqual(ans['args']['two']['type'], float)
         self.assertEqual(ans['args']['two']['nargs'], '+')
 
     def test_default_inference(self):
@@ -109,10 +109,10 @@ class TestParser(unittest.TestCase):
             textwrap.dedent("""\
             Test docstring."""))
         self.assertIn('one', ans['args'])
-        self.assertEqual(ans['args']['one']['type'], 'int')
+        self.assertEqual(ans['args']['one']['type'], int)
         self.assertEqual(ans['args']['one']['default'], 324)
         self.assertIn('two', ans["args"])
-        self.assertEqual(ans['args']['two']['type'], 'float')
+        self.assertEqual(ans['args']['two']['type'], float)
         self.assertEqual(ans['args']['two']['default'], 0.234)
 
     def test_default_inference_without_docstring_for_type(self):
@@ -137,10 +137,10 @@ class TestParser(unittest.TestCase):
             textwrap.dedent("""\
             Test docstring."""))
         self.assertIn('one', ans['args'])
-        self.assertEqual(ans['args']['one']['type'], 'int')
+        self.assertEqual(ans['args']['one']['type'], int)
         self.assertEqual(ans['args']['one']['default'], 324)
         self.assertIn('two', ans["args"])
-        self.assertEqual(ans['args']['two']['type'], 'float')
+        self.assertEqual(ans['args']['two']['type'], float)
         self.assertEqual(ans['args']['two']['default'], 0.234)
 
     def test_docstring_without_description(self):

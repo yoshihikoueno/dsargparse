@@ -93,7 +93,7 @@ def _parse_args(args_desc, func):
         if outer_type in ('list', 'tuple'):
             type_, nargs = inner_type, '+'
         else: nargs = None
-        return type_, nargs
+        return eval(type_), nargs
 
     def extract_value(line):
         '''exctract a key from a line'''
@@ -105,7 +105,7 @@ def _parse_args(args_desc, func):
             nargs = '+'
             if default: type_ = type(default[0])
             else: type_ = None
-        else: nargs, type_ = None, type(default).__name__
+        else: nargs, type_ = None, type(default)
         return type_, nargs
 
     argmap = {}
