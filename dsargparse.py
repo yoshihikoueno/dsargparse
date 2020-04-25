@@ -240,7 +240,7 @@ class ArgumentParser(argparse.ArgumentParser):
         """
         if _HELP not in kwargs:
             for name in args:
-                name = name.replace("-", "")
+                name = re.sub(r'^-*', '', name)
                 if name in self.__argmap:
                     kwargs[_HELP] = self.__argmap[name]
                     break
