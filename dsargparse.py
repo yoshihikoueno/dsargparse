@@ -101,7 +101,9 @@ def _parse_args(args_desc, func):
         return value
 
     def guess_type_nargs(default):
-        if isinstance(default, (list, tuple)):
+        if default is None:
+            return None, None
+        elif isinstance(default, (list, tuple)):
             nargs = '+'
             if default: type_ = type(default[0])
             else: type_ = None
