@@ -27,6 +27,10 @@ __all__ = argparse.__all__
 
 
 _HELP = "help"
+_DEFAULT = 'default'
+_TYPE = 'type'
+_NARGS = 'nargs'
+_REQUIRED = 'required'
 _DESCRIPTION = "description"
 _FORMAT_CLASS = "formatter_class"
 
@@ -46,26 +50,63 @@ def _checker(keywords):
     return _
 
 
-def _parse_args(args_desc):
+def extract_default_from_signature(argname, func):
+    res = inspect.getfullargspec(func)
+    args, defaults = res[0], res[3]
+
+    if args is None: return None
+    if defaults is None: return None
+
+    args = args[-len(defaults):]
+    args = dict(zip(args, defaults))
+    default = args.get(argname, None)
+    return default
+
+
+def _parse_args(args_desc, func):
     '''Parse an Args description
 
     Parse given args description and return in dictionary form.
 
     Args:
         args_desc: description of args.
+        func: function which holds args this func analyzes
 
     Returns:
         a dictionary.
     '''
     def extract_key(line):
         '''exctract a key from a line'''
-        key = re.sub(r'(^[^\s]+?):(.|\n)*$', r'\1', line)
+        key = re.sub(r'(^[^\s]+?)\s*(\(\s*([^:]+?)\s*\))?\s*:((.|\n)*)$', r'\1', line).strip()
         return key
+
+    def extract_type_nargs(line):
+        type_ = re.sub(r'(^[^\s]+?)\s*(\(\s*([^:]+?)\s*\))?\s*:((.|\n)*)$', r'\3', line).strip()
+        if type_ == '': return None, None
+        if type_.count('[') > 1: return None, None  # can't deal with it
+
+        outer_type = re.sub(r'^([^\s]+?)(\s*\[\s*([^\s]+)\s*\]\s*)?$', r'\1', type_)
+        inner_type = re.sub(r'^([^\s]+?)(\s*\[\s*([^\s]+)\s*\]\s*)?$', r'\3', type_)
+
+        if inner_type == '': inner_type = None
+
+        if outer_type in ('list', 'tuple'):
+            type_, nargs = inner_type, '+'
+        else: nargs = None
+        return type_, nargs
 
     def extract_value(line):
         '''exctract a key from a line'''
-        value = re.sub(r'^[^\s]+?:((.|\n)*)$', r'\1', line).strip()
+        value = re.sub(r'(^[^\s]+?)\s*(\(\s*([^:]+?)\s*\))?\s*:((.|\n)*)$', r'\4', line).strip()
         return value
+
+    def guess_type_nargs(default):
+        if isinstance(default, (list, tuple)):
+            nargs = '+'
+            if default: type_ = type(default[0])
+            else: type_ = None
+        else: nargs, type_ = None, type(default).__name__
+        return type_, nargs
 
     argmap = {}
 
@@ -75,8 +116,13 @@ def _parse_args(args_desc):
         assert ':' in arg_line
         additional_lines = itertools.takewhile(_starts_with_white, args[idx + 1:])
         if additional_lines: arg_line += '\n' + '\n'.join(additional_lines)
+
         key, value = extract_key(arg_line), extract_value(arg_line)
-        argmap[key] = value
+        type_, nargs = extract_type_nargs(arg_line)
+        default = extract_default_from_signature(key, func)
+        if (type_ is None) and (nargs is None): type_, nargs = guess_type_nargs(default)
+
+        argmap[key] = {_HELP: value, _TYPE: type_, _DEFAULT: default, _NARGS: nargs}
     return argmap
 
 
@@ -92,18 +138,19 @@ def _starts_with_white(line):
     return bool(re.match(r'^\s+.*$', line))
 
 
-def _parse_doc(doc):
+def _parse_doc(func):
     """Parse a docstring.
 
     Parse a docstring and extract three components; headline, description,
     and map of arguments to help texts.
 
     Args:
-      doc: docstring.
+      func: function object
 
     Returns:
       a dictionary.
     """
+    doc = func.__doc__
     lines = doc.strip().splitlines()
     descriptions = list(filter(bool, itertools.takewhile(_checker(_KEYWORDS), lines)))
 
@@ -114,7 +161,7 @@ def _parse_doc(doc):
         _checker(_KEYWORDS_OTHERS),
         itertools.dropwhile(_checker(_KEYWORDS_ARGS), lines))))
 
-    argmap = _parse_args(textwrap.dedent('\n'.join(args[1:])))
+    argmap = _parse_args(textwrap.dedent('\n'.join(args[1:])), func)
     return dict(headline=descriptions[0], description=description, args=argmap)
 
 
@@ -159,7 +206,7 @@ class _SubparsersWrapper(object):
                 raise ValueError(
                     "No docstrings given in {0}".format(func.__name__))
 
-            info = _parse_doc(func.__doc__)
+            info = _parse_doc(func)
             if _HELP not in kwargs or not kwargs[_HELP]:
                 kwargs[_HELP] = info["headline"]
             if _DESCRIPTION not in kwargs or not kwargs[_DESCRIPTION]:
@@ -238,13 +285,48 @@ class ArgumentParser(argparse.ArgumentParser):
         Keyword Args:
           same keywards arguments as argparse.ArgumentParser.add_argument.
         """
-        if _HELP not in kwargs:
-            for name in args:
-                name = re.sub(r'^-*', '', name)
-                if name in self.__argmap:
-                    kwargs[_HELP] = self.__argmap[name]
-                    break
+        for name in args:
+            name = re.sub(r'^-*', '', name)
+            if name in self.__argmap:
+                arginfo = self.__argmap[name]
+                for key, value in arginfo.items():
+                    if key in kwargs: continue
+                    if value is None: continue
+                    kwargs[key] = value
+                break
         return super(ArgumentParser, self).add_argument(*args, **kwargs)
+
+    def add_arguments_auto(self, excludes=None, kind='optional', **kargs):
+        '''Add arguments of the function automatically
+
+        This function will add arguments of the function which this instance
+        is responsible for.
+        Arguments with a default value will be registered as 'required=False',
+        otherwise as 'required=True'.
+        As this function registers args to the parser, following information will be added.
+            - help: help message of the arg. retrieved from docstring.
+            - type: the type of the arg. retrieved from docstring/default value
+            - default: the default value of the arg. retrieved from default value in the function definition
+            - required: True if default value can be identified, otherwise False
+
+        Args:
+            excludes: list of arguments that shouldn't be added by this function.
+            kind: as which kind arguments should be registered.
+                Possible values:
+                    'optional': optinal args. added with '--' prefix
+                    'positional': optinal args. added with '--' prefix
+            kargs: additional arguments to add_argument function.
+
+        Returns:
+            self
+        '''
+        if kind == 'optional': prefix = '--'
+        elif kind == 'positional': prefix = ''
+        else: raise ValueError
+
+        for name in self.__argmap:
+            self.add_argument(prefix + name)
+        return self
 
     def parse_and_run(self, **kwargs):
         """Parse arguments and run the selected command.

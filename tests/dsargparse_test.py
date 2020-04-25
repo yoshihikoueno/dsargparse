@@ -21,25 +21,10 @@ import dsargparse
 class TestParser(unittest.TestCase):
     """Unit tests for _parse_doc function.
     """
-
-    def test_full_document(self):
-        """Test for a full information docstring.
-        """
-        ans = dsargparse._parse_doc(dsargparse._parse_doc.__doc__)
-
-        self.assertEqual(ans["headline"], "Parse a docstring.")
-        self.assertEqual(ans["description"], textwrap.dedent("""\
-            Parse a docstring.
-
-            Parse a docstring and extract three components; headline, description,
-            and map of arguments to help texts."""))
-        self.assertIn("doc", ans["args"])
-        self.assertEqual(ans["args"]["doc"], "docstring.")
-
     def test_minimum_document(self):
         """Test for a minimum docstring.
         """
-        ans = dsargparse._parse_doc(dsargparse._checker.__doc__)
+        ans = dsargparse._parse_doc(dsargparse._checker)
         self.assertEqual(
             ans["headline"],
             "Generate a checker which tests a given value not starts with keywords.")
@@ -48,47 +33,164 @@ class TestParser(unittest.TestCase):
             "Generate a checker which tests a given value not starts with keywords.")
         self.assertEqual(len(ans["args"]), 0)
 
+    def test_type(self):
+        """ Test for a docstring which doesn't have descriptions.
+        """
+        def test():
+            """Test docstring.
+
+            Args:
+              one ( int ) : definition of one.
+              two ( float ) : definition of two.
+
+            Returns:
+              some value.
+            """
+            return
+
+        ans = dsargparse._parse_doc(test)
+        self.assertEqual(ans["headline"], "Test docstring.")
+        self.assertEqual(
+            ans["description"],
+            textwrap.dedent("""\
+            Test docstring."""))
+        self.assertIn('one', ans['args'])
+        self.assertEqual(ans['args']['one']['type'], 'int')
+        self.assertIn('two', ans["args"])
+        self.assertEqual(ans['args']['two']['type'], 'float')
+
+    def test_collective_type(self):
+        """ Test for a docstring which doesn't have descriptions.
+        """
+        def test():
+            """Test docstring.
+
+            Args:
+              one ( list[int] ) : definition of one.
+              two ( tuple[ float ] ) : definition of two.
+
+            Returns:
+              some value.
+            """
+            return
+
+        ans = dsargparse._parse_doc(test)
+        self.assertEqual(ans["headline"], "Test docstring.")
+        self.assertEqual(
+            ans["description"],
+            textwrap.dedent("""\
+            Test docstring."""))
+        self.assertIn('one', ans['args'])
+        self.assertEqual(ans['args']['one']['type'], 'int')
+        self.assertEqual(ans['args']['one']['nargs'], '+')
+        self.assertIn('two', ans["args"])
+        self.assertEqual(ans['args']['two']['type'], 'float')
+        self.assertEqual(ans['args']['two']['nargs'], '+')
+
+    def test_default_inference(self):
+        """ Test for a docstring which doesn't have descriptions.
+        """
+        def test(one=324, two=0.234):
+            """Test docstring.
+
+            Args:
+              one ( int ) : definition of one.
+              two ( float ) : definition of two.
+
+            Returns:
+              some value.
+            """
+            return
+
+        ans = dsargparse._parse_doc(test)
+        self.assertEqual(ans["headline"], "Test docstring.")
+        self.assertEqual(
+            ans["description"],
+            textwrap.dedent("""\
+            Test docstring."""))
+        self.assertIn('one', ans['args'])
+        self.assertEqual(ans['args']['one']['type'], 'int')
+        self.assertEqual(ans['args']['one']['default'], 324)
+        self.assertIn('two', ans["args"])
+        self.assertEqual(ans['args']['two']['type'], 'float')
+        self.assertEqual(ans['args']['two']['default'], 0.234)
+
+    def test_default_inference_without_docstring_for_type(self):
+        """ Test for a docstring which doesn't have descriptions.
+        """
+        def test(one=324, two=0.234):
+            """Test docstring.
+
+            Args:
+              one: definition of one.
+              two: definition of two.
+
+            Returns:
+              some value.
+            """
+            return
+
+        ans = dsargparse._parse_doc(test)
+        self.assertEqual(ans["headline"], "Test docstring.")
+        self.assertEqual(
+            ans["description"],
+            textwrap.dedent("""\
+            Test docstring."""))
+        self.assertIn('one', ans['args'])
+        self.assertEqual(ans['args']['one']['type'], 'int')
+        self.assertEqual(ans['args']['one']['default'], 324)
+        self.assertIn('two', ans["args"])
+        self.assertEqual(ans['args']['two']['type'], 'float')
+        self.assertEqual(ans['args']['two']['default'], 0.234)
+
     def test_docstring_without_description(self):
         """ Test for a docstring which doesn't have descriptions.
         """
-        ans = dsargparse._parse_doc("""Test docstring.
+        def test():
+            """Test docstring.
 
-        Args:
-          one: definition of one.
-          two: definition of two.
+            Args:
+              one: definition of one.
+              two: definition of two.
 
-        Returns:
-          some value.
-        """)
+            Returns:
+              some value.
+            """
+            return
+
+        ans = dsargparse._parse_doc(test)
         self.assertEqual(ans["headline"], "Test docstring.")
         self.assertEqual(
             ans["description"],
             textwrap.dedent("""\
             Test docstring."""))
         self.assertIn("one", ans["args"])
-        self.assertEqual(ans["args"]["one"], "definition of one.")
+        self.assertEqual(ans["args"]["one"]['help'], "definition of one.")
         self.assertIn("two", ans["args"])
-        self.assertEqual(ans["args"]["two"], "definition of two.")
+        self.assertEqual(ans["args"]["two"]['help'], "definition of two.")
 
     def test_docstring_with_multiline_args(self):
         """ Test for a docstring which doesn't have descriptions.
         """
-        # import pdb; pdb.set_trace()
-        ans = dsargparse._parse_doc("""Test docstring.
+        def test():
+            """Test docstring.
 
-        Args:
-          one: definition of one.
-            More detail description about one.
-            More detail description about one.
-            More detail description about one.
-          two: definition of two.
-            More detail description about two.
-            More detail description about two.
-            More detail description about two.
+            Args:
+              one: definition of one.
+                More detail description about one.
+                More detail description about one.
+                More detail description about one.
+              two: definition of two.
+                More detail description about two.
+                More detail description about two.
+                More detail description about two.
 
-        Returns:
-          some value.
-        """)
+            Returns:
+              some value.
+            """
+            return
+
+        ans = dsargparse._parse_doc(test)
         self.assertEqual(ans["headline"], "Test docstring.")
         self.assertEqual(
             ans["description"],
@@ -96,7 +198,7 @@ class TestParser(unittest.TestCase):
             Test docstring."""))
         self.assertIn("one", ans["args"])
         self.assertEqual(
-            ans["args"]["one"],
+            ans["args"]["one"]['help'],
             textwrap.dedent('''\
                 definition of one.
                   More detail description about one.
@@ -105,7 +207,7 @@ class TestParser(unittest.TestCase):
         )
         self.assertIn("two", ans["args"])
         self.assertEqual(
-            ans["args"]["two"],
+            ans["args"]["two"]['help'],
             textwrap.dedent('''\
                 definition of two.
                   More detail description about two.
@@ -116,13 +218,16 @@ class TestParser(unittest.TestCase):
     def test_docstring_without_args(self):
         """ Test for a docstring which doesn't have args.
         """
-        ans = dsargparse._parse_doc("""Test docstring.
+        def test():
+            """Test docstring.
 
-        This function do something.
+            This function do something.
 
-        Returns:
-          some value.
-        """)
+            Returns:
+              some value.
+            """
+            return
+        ans = dsargparse._parse_doc(test)
         self.assertEqual(ans["headline"], "Test docstring.")
         self.assertEqual(
             ans["description"],
