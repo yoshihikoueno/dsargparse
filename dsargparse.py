@@ -178,7 +178,7 @@ class _SubparsersWrapper(object):
     def __init__(self, delegate):
         self.__delegate = delegate
 
-    def add_parser(self, func=None, name=None, **kwargs):
+    def add_parser(self, func=None, name=None, add_arguments_auto=False, **kwargs):
         """Add parser.
 
         This method makes a new sub command parser. It takes same arguments
@@ -221,6 +221,7 @@ class _SubparsersWrapper(object):
 
             res = self.__delegate.add_parser(name, argmap=info["args"], **kwargs)
             res.set_defaults(cmd=func)
+            if add_arguments_auto: res.add_arguments_auto()
 
         else:
             res = self.__delegate.add_parser(name, **kwargs)
