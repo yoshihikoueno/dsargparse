@@ -43,7 +43,7 @@ def greeting(title, name):
     return
 
 
-def goodbye(name): # pylint: disable=unused-argument
+def goodbye(name):
     """Print a goodbye message.
 
     This command print "Goodbye, <name>.".
