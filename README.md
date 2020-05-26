@@ -27,8 +27,7 @@ $ pip install -U git+https://github.com/yoshihikoueno/dsargparse.git@master
 
 Example
 ---------
-Suppose to make a following trivial greeting command consists of two subcommands
-supplied as functions shown below.
+Suppose we are to expose 2 functions `greeting` and `goodbye` to the commandline interface.
 
 ```python
 def greeting(title, name):
@@ -56,7 +55,7 @@ def goodbye(name): # pylint: disable=unused-argument
     return
 ```
 
-With built-in module `argparse`, you need to code like below:
+With built-in module `argparse`, you would need to code like below:
 ```python3
 import argparse
 
