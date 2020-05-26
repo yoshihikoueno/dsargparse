@@ -1,19 +1,22 @@
 dsargparse
 ==========
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
-[![Build Status](https://travis-ci.org/jkawamoto/dsargparse.svg?branch=master)](https://travis-ci.org/jkawamoto/dsargparse)
-[![Code Climate](https://codeclimate.com/github/jkawamoto/dsargparse/badges/gpa.svg)](https://codeclimate.com/github/jkawamoto/dsargparse)
-[![PyPi](https://img.shields.io/badge/pypi-0.3.2-lightgrey.svg)](https://pypi.python.org/pypi?:action=display&name=dsargparse)
-[![Japanese](https://img.shields.io/badge/qiita-%E6%97%A5%E6%9C%AC%E8%AA%9E-brightgreen.svg)](http://qiita.com/jkawamoto/items/7d8d179875222bf66bf8)
-
 ![dsargparse](https://jkawamoto.github.io/dsargparse/_static/dsargparse.png)
 
-dsargparse is a wrapper of argparse library which prepares helps and descriptions
-from docstrings. It also sets up functions to be run for each sub command,
-and provides a helper function which parses args and run a selected command.
+**dsargparse** aims to eliminate redundant codes for building commandline interfaces.
 
-Using this library, you don't need to write same texts in docstrings, help,
-and description.
+**dsargparse** is a wrapper of argparse library which tries to retrieve
+following information from the docstring of the specified function:
+
+- function description
+- function detailed description
+- arguments (options) that the function has
+- help message of arguments
+- type of arguments
+- default value of arguments
+
+Currently **dsargparse** supports only docstrings which align with google docstring style,
+but we'd welcome contributions to make this module support more various styles.
 
 Install
 ---------
@@ -28,11 +31,7 @@ Suppose to make a following trivial greeting command consists of two subcommands
 supplied as functions shown below.
 
 ```python
-"""Sample command of dsargparse package.
-
-This text will be used as description of this command.
-"""
-def greeting(title, name): # pylint: disable=unused-argument
+def greeting(title, name):
     """Print a greeting message.
 
     This command print "Good morning, <title> <name>.".
@@ -42,7 +41,7 @@ def greeting(title, name): # pylint: disable=unused-argument
       name: name of the person.
     """
     print("Good morning, {title} {name}.".format(**locals()))
-    return 0
+    return
 
 
 def goodbye(name): # pylint: disable=unused-argument
@@ -51,55 +50,35 @@ def goodbye(name): # pylint: disable=unused-argument
     This command print "Goodbye, <name>.".
 
     Args:
-      name: name of the person say goodbye to.
+      name (str): name of the person say goodbye to.
     """
     print("Goodbye, {name}".format(**locals()))
-    return 0
+    return
 ```
 
-The `dsargparse` reduces codes you need from the **before**
-```python
-# Before dsargparse
-import sys
-import textwrap
-
+With built-in module `argparse`, you need to code like below:
+```python3
 import argparse
 
 def main():
-    """ The main function.
-    """
-    parser = argparse.ArgumentParser(
-      description=textwrap.dedent("""\
-        Sample command of argparse package.
-
-        This text will be used as description of this command.
-        """))
+    parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
     greeting_cmd = subparsers.add_parser(
-        "greeting",
-        help="Print a greeting message.",
-        description=textwrap.dedent("""\
-            Print a greeting message.
-
-            This command print "Good morning, <title> <name>".
-            """))
-    greeting_cmd.add_argument(
-        "title", help="title of the person say greetings to")
-    greeting_cmd.add_argument(
-        "name", help="name of the person say greetings to.")
+        'greeting',
+        help='Print a greeting message.',
+        description='Print a greeting message.\nThis command print "Good morning, <title> <name>".',
+    )
+    greeting_cmd.add_argument('title', help='title of the person say greetings to')
+    greeting_cmd.add_argument('name', help='name of the person say greetings to.')
     greeting_cmd.set_defaults(cmd=greeting)
 
     goodbye_cmd = subparsers.add_parser(
-        "goodbye",
-        help="Print a goodbye message.",
-        description=textwrap.dedent("""\
-            Print a goodbye message.
-
-            This command print "Goodbye, <name>".
-            """))
-    goodbye_cmd.add_argument(
-        "name", help="name of the person say goodbye to.")
+        'goodbye',
+        help='Print a goodbye message.',
+        description='Print a goodbye message.\nThis command print "Goodbye, <name>".',
+    )
+    goodbye_cmd.add_argument('name', help='name of the person say goodbye to.')
     goodbye_cmd.set_defaults(cmd=goodbye)
 
     args = parser.parse_args()
@@ -107,23 +86,45 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
 ```
-to the **after**
-```python
-# After dsargparse
-import sys
+Notice that there are many redundant texts in the code above.
 
+Namely, descriptions for the functions and its options are duplicated as they are
+supposed to be the same as in the function's docstring.
+
+We can remove those redundancies by retrieving necessary information from docstring,
+and this is where `dsargparse` comes in.
+
+With `dsargparse`, you can do the same thing with much simpler code as shown below:
+
+```python3
 import dsargparse
 
 def main():
-    """ The main function.
-    """
+    parser = dsargparse.ArgumentParser(main=main)
+    subparsers = parser.add_subparsers()
+
+    greeting_cmd = subparsers.add_parser(greeting, add_arguments_auto=True)
+    goodbye_cmd = subparsers.add_parser(goodbye, add_arguments_auto=True)
+
+    return parser.parse_and_run()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Of course you can override whatever you want simply by specifying the stuff you want to override.
+```python
+import dsargparse
+
+def main():
     parser = dsargparse.ArgumentParser(main=main)
     subparsers = parser.add_subparsers()
 
     greeting_cmd = subparsers.add_parser(greeting)
-    greeting_cmd.add_argument("title")
+    greeting_cmd.add_argument("title", help='some custom help here')
     greeting_cmd.add_argument("name")
 
     goodbye_cmd = subparsers.add_parser(goodbye)
@@ -135,7 +136,12 @@ def main():
 if __name__ == "__main__":
     sys.exit(main())
 ```
+In this case, `title` option of `greeting` command will get the custom description specified by user argument,
+but `dsargparse` will still try to find the description and type for other options and commands.
 
+User specified arguments are always prioritised over what `dsargparse` finds in `dsargparse`.
+We tried to keep the behavior of `dsargparse` as close as `argparse`, so all the arguments available
+in `argparse` are also available in `dsargparse`.
 
 Usage
 ------
@@ -157,8 +163,7 @@ If you give the main function, you don't need to set `description`, and
 ### `add_argument`
 This method adds a new argument to the current parser. The function is
 same as `argparse.ArgumentParser.add_argument`. But, this method
-tries to determine help messages for the adding argument from some
-docstrings.
+tries to retrieve information from the docstring.
 
 If the new arguments belong to some subcommand, the docstring
 of a function implements behavior of the subcommand has `Args:` section,
@@ -181,12 +186,6 @@ library.
 This method parses arguments and run the selected command. It returns a value
 which the selected command returns. This function takes as same arguments as
 `ArgumentParser.parse_args`.
-
-
-### Other functions and arguments
-See more detail of original `argparse`.
-- https://docs.python.org/3/library/argparse.html
-- https://docs.python.org/2.7/library/argparse.html
 
 
 License

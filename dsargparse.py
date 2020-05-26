@@ -196,6 +196,7 @@ class _SubparsersWrapper(object):
         Args:
           func: function implements the process of this command.
           name: name of this command. If not give, the function name is used.
+          add_arguments_auto: whether this function should automatically add arguments
 
         Returns:
           new ArgumentParser object.
