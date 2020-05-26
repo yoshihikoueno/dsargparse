@@ -33,6 +33,7 @@ _NARGS = 'nargs'
 _REQUIRED = 'required'
 _DESCRIPTION = "description"
 _FORMAT_CLASS = "formatter_class"
+_ACTION = 'action'
 
 _KEYWORDS_ARGS = ("Args:",)
 _KEYWORDS_OTHERS = ("Returns:", "Raises:", "Yields:", "Usage:")
@@ -123,8 +124,10 @@ def _parse_args(args_desc, func):
         type_, nargs = extract_type_nargs(arg_line)
         default = extract_default_from_signature(key, func)
         if (type_ is None) and (nargs is None): type_, nargs = guess_type_nargs(default)
+        if (type_ is bool) and (nargs is None): default, type_, action = False, None, 'store_true'
+        else: action = None
 
-        argmap[key] = {_HELP: value, _TYPE: type_, _DEFAULT: default, _NARGS: nargs}
+        argmap[key] = {_HELP: value, _TYPE: type_, _DEFAULT: default, _NARGS: nargs, _ACTION: action}
     return argmap
 
 
