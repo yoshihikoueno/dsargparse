@@ -144,13 +144,8 @@ in `argparse` are also available in `dsargparse`.
 
 Usage
 ------
-`dsargparse` is a simple wrapper of the original `argparse`. To use it, install
-this package and just adding `ds` to your import command i.e. from
-`import argparse` to `import dsargparse`. In addition to all API `argparse` has,
-`dsargparse` updates three functions; constructor of `ArgumentParser` object,
-`ArgumentParser.add_argument`, and `add_parser` method of the action class made
-by `ArgumentParser.add_subparsers()`, and give one new method
-`ArgumentParser.parse_and_run`.
+You can start using `dsargparse` just like `argparse` as it inherits all the classes and functions
+with the same arguments. `dsargparse` will just fill in empty arguments for you where possible.
 
 ### `dsargparse.ArgumentParser`
 In addition to the keyword arguments `argparse.ArgumentParser` takes,
