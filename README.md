@@ -25,6 +25,81 @@ Use `pip` to install.
 $ pip install -U git+https://github.com/yoshihikoueno/dsargparse.git@master
 ```
 
+Quick Start
+--------------
+```python
+import dsargparse
+
+
+def greeting(title, name):
+    """Print a greeting message.
+
+    This command print "Good morning, <title> <name>.".
+
+    Args:
+      title: title of the person.
+      name: name of the person.
+    """
+    print("Good morning, {title} {name}.".format(**locals()))
+    return
+
+
+def goodbye(name):
+    """Print a goodbye message.
+
+    This command print "Goodbye, <name>.".
+
+    Args:
+      name (str): name of the person say goodbye to.
+    """
+    print("Goodbye, {name}".format(**locals()))
+    return
+
+
+def main():
+    '''CLI interface'''
+    parser = dsargparse.ArgumentParser(main=main)
+    subparsers = parser.add_subparsers()
+    subparsers.add_parser(greeting, add_arguments_auto=True)
+    subparsers.add_parser(goodbye, add_arguments_auto=True)
+    return parser.parse_and_run()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+The above code will behave as below:
+
+```bash
+python3 test.py --help
+# usage: test.py [-h] {greeting,goodbye} ...
+# 
+# CLI interface
+# 
+# positional arguments:
+#   {greeting,goodbye}
+#     greeting          Print a greeting message.
+#     goodbye           Print a goodbye message.
+# 
+# optional arguments:
+#   -h, --help          show this help message and exit
+
+
+python3 test.py greeting --help
+# usage: test.py greeting [-h] [--title TITLE] [--name NAME]
+# 
+# Print a greeting message.
+# 
+# This command print "Good morning, <title> <name>.".
+# 
+# optional arguments:
+#   -h, --help     show this help message and exit
+#   --title TITLE  title of the person.
+#   --name NAME    name of the person.
+```
+
+
 Example
 ---------
 Suppose we are to expose 2 functions `greeting` and `goodbye` to the commandline interface.
