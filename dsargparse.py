@@ -152,19 +152,26 @@ def _parse_doc(func):
     Returns:
       a dictionary.
     """
-    doc = func.__doc__
+    doc = func.__doc__ if func.__doc__ is not None else ''
     lines = doc.strip().splitlines()
     descriptions = list(filter(bool, itertools.takewhile(_checker(_KEYWORDS), lines)))
 
+    # infer headline
+    if len(descriptions) > 0: headline = descriptions[0]
+    else: headline = ''
+
+    # infer description
     if len(descriptions) > 0: description = descriptions[0]
     if len(descriptions) > 1: description += "\n\n" + textwrap.dedent("\n".join(descriptions[1:]))
+    if len(descriptions) == 0: description = ''
 
+    # infer args
     args = list(filter(bool, itertools.takewhile(
         _checker(_KEYWORDS_OTHERS),
         itertools.dropwhile(_checker(_KEYWORDS_ARGS), lines))))
 
     argmap = _parse_args(textwrap.dedent('\n'.join(args[1:])), func)
-    return dict(headline=descriptions[0], description=description, args=argmap)
+    return dict(headline=headline, description=description, args=argmap)
 
 
 class _SubparsersWrapper(object):
@@ -250,7 +257,7 @@ class ArgumentParser(argparse.ArgumentParser):
     def __init__(self, main=None, argmap=None, *args, **kwargs):
         if main:
             if _DESCRIPTION not in kwargs or not kwargs[_DESCRIPTION]:
-                info = _parse_doc(inspect.getmodule(main).__doc__)
+                info = _parse_doc(inspect.getmodule(main))
                 kwargs[_DESCRIPTION] = info[_DESCRIPTION]
             if _FORMAT_CLASS not in kwargs or not kwargs[_FORMAT_CLASS]:
                 kwargs[_FORMAT_CLASS] = argparse.RawTextHelpFormatter
