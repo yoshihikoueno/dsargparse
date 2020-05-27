@@ -183,10 +183,9 @@ class _SubparsersWrapper(object):
     To create an instance, the constructor takes a reference to an instance of
     the action class.
     """
-    __slots__ = ("__delegate")
 
     def __init__(self, delegate):
-        self.__delegate = delegate
+        self._delegate = delegate
 
     def add_parser(self, func=None, name=None, add_arguments_auto=False, **kwargs):
         """Add parser.
@@ -230,17 +229,17 @@ class _SubparsersWrapper(object):
             if not name:
                 name = func.__name__ if hasattr(func, "__name__") else func
 
-            res = self.__delegate.add_parser(name, argmap=info["args"], **kwargs)
+            res = self._delegate.add_parser(name, argmap=info["args"], **kwargs)
             res.set_defaults(cmd=func)
             if add_arguments_auto: res.add_arguments_auto()
 
         else:
-            res = self.__delegate.add_parser(name, **kwargs)
+            res = self._delegate.add_parser(name, **kwargs)
 
         return res
 
     def __repr__(self):
-        return self.__delegate.__repr__()
+        return self._delegate.__repr__()
 
 
 class ArgumentParser(argparse.ArgumentParser):
