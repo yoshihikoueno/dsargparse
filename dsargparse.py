@@ -55,13 +55,14 @@ def extract_default_from_signature(argname, func):
     res = inspect.getfullargspec(func)
     args, defaults = res[0], res[3]
 
-    if args is None: return None
-    if defaults is None: return None
+    if args is None: return 'invalid', None
+    if defaults is None: return 'invalid', None
 
     args = args[-len(defaults):]
     args = dict(zip(args, defaults))
-    default = args.get(argname, None)
-    return default
+    if argname in args: status, default = 'valid', args[argname]
+    else: status, default = 'invalid', None
+    return status, default
 
 
 def _parse_args(args_desc, func):
@@ -122,12 +123,14 @@ def _parse_args(args_desc, func):
 
         key, value = extract_key(arg_line), extract_value(arg_line)
         type_, nargs = extract_type_nargs(arg_line)
-        default = extract_default_from_signature(key, func)
+        default_status, default = extract_default_from_signature(key, func)
         if (type_ is None) and (nargs is None): type_, nargs = guess_type_nargs(default)
         if (type_ is bool) and (nargs is None): default, type_, action = False, None, 'store_true'
         else: action = None
 
-        argmap[key] = {_HELP: value, _TYPE: type_, _DEFAULT: default, _NARGS: nargs, _ACTION: action}
+        argmap[key] = {_HELP: value, _TYPE: type_, _NARGS: nargs, _ACTION: action}
+        if default_status == 'valid': argmap[key][_DEFAULT] = default
+        argmap[key][_REQUIRED] = False if _DEFAULT in argmap[key] else True
     return argmap
 
 
